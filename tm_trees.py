@@ -88,8 +88,7 @@ class TMTree:
 
     def __init__(self, name: str, subtrees: List[TMTree],
                  data_size: int = 0) -> None:
-        
-        #TODO(Task 1)
+        # TODO(Task 1)
         # 1. Initialize self._colour and self.data_size, according to the
         # docstring. DONE
         # 2. Set this tree as the parent for each of its subtrees. DONE
@@ -109,20 +108,18 @@ class TMTree:
         self._name = name
         self._subtrees = subtrees[:]
         self._parent_tree = None
-        #task 1 initialization
+        # task 1 initialization
         self.data_size = data_size
-        self._colour = (randint(0,255), randint(0,255), randint(0,255))
+        self._colour = (randint(0, 256), randint(0, 256), randint(0, 256))
 
         # You will change this in Task 5
         if len(self._subtrees) > 0:
             self._expanded = True
         else:
             self._expanded = False
-            
-        #task one create parents
+        # task one create parents
         for subtreei in range(len(self._subtrees)):
             self._subtrees[subtreei]._parent_tree = self
-        
 
     def is_empty(self) -> bool:
         """Return True iff this tree is empty.
@@ -145,6 +142,27 @@ class TMTree:
         # Programming tip: use "tuple unpacking assignment" to easily extract
         # elements of a rectangle, as follows.
         # x, y, width, height = rect
+        # TODO: Implement checking for if the width is bigger than the height and changing the alg accordingly
+        x, y, width, height = rect
+        if self.data_size == 0:  # base case 1 file is empty
+            pass
+        elif self._subtrees == []:  # base case 2 file is a leaf(not a directory)
+            self.rect = rect
+        elif len(self._subtrees) == 1:  # base case 3 subtree only has one file in it
+            self._subtrees[0].rect = rect
+        else:  # base case 3 file a internal node(is a directory)
+            self._subtrees[0].rect = (x, y, math.floor(width*(self._subtrees[0].data_size/self.data_size)), height)  # starting point to allow for back track
+            for curr_file in range(len(self._subtrees[1:-1])):
+                startx = self._subtrees[curr_file-1].rect[0]
+                file_width = math.floor(width*(self._subtrees[curr_file].data_size/self.data_size))
+                self._subtrees[curr_file].rect = (startx, y, file_width, height)
+            startx = self._subtrees[-2].rect[0]
+            file_width = math.floor(width-(self._subtrees[-2].rect[0] + self._subtrees[-2].rect[2]))
+            self._subtrees[curr_file].rect = (startx, y, file_width, height)  # modify alg to make sure that full rectange is filled
+            self._subtrees = [x.update_rectangles(x.rect) for x in self._subtrees]  # recurse through all of the subtrees
+                
+
+                
 
     def get_rectangles(self) -> List[Tuple[Tuple[int, int, int, int],
                                            Tuple[int, int, int]]]:
@@ -245,7 +263,6 @@ class FileSystemTree(TMTree):
 
     def __init__(self, path: str) -> None:
         """Store the file tree structure contained in the given file or folder.
-
         Precondition: <path> is a valid path for this computer.
         """
         # Remember that you should recursively go through the file system
@@ -253,7 +270,20 @@ class FileSystemTree(TMTree):
         # encountered.
         #
         # Also remember to make good use of the superclass constructor!
-        # TODO: (Task 1) Implement the initializer
+        # TODO: (Task 1) Implement the initializer DONE
+        # setting variables to be used in init
+        name = os.path.basename(path)
+        file_size = os.path.getsize(path)
+        if os.path.isdir(path):  # recursive case
+            children = []
+            for child in os.listdir(path):
+                child_path = os.path.join(path, child)
+                child_node = FileSystemTree(child_path)
+                child_node._parent_tree = self
+                children.append(child_node)
+            TMTree.__init__(self, name, children, file_size)
+        else:  # is not a directory, base case
+            TMTree.__init__(self, name, [], file_size)
 
     def get_separator(self) -> str:
         """Return the file separator for this OS.
@@ -280,11 +310,20 @@ class FileSystemTree(TMTree):
         return f' ({", ".join(components)})'
 
 
-if __name__ == '__main__':
-    import python_ta
+# if __name__ == '__main__':
+#     import python_ta
 
-    python_ta.check_all(config={
-        'allowed-import-modules': [
-            'python_ta', 'typing', 'math', 'random', 'os', '__future__'
-        ]
-    })
+#     python_ta.check_all(config={
+#         'allowed-import-modules': [
+#             'python_ta', 'typing', 'math', 'random', 'os', '__future__'
+#         ]
+#     })
+# EXAMPLE_PATH = os.path.join(os.getcwd(), 'example-directory', 'workshop')
+# tree = FileSystemTree(os.path.join(EXAMPLE_PATH, 'draft.pptx'))
+# print(tree._name == 'draft.pptx')
+# print(tree._subtrees == [])
+# print(tree._parent_tree is None)
+# print(tree.data_size == 58)
+# print(tree._colour)
+    
+
