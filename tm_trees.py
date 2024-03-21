@@ -151,28 +151,29 @@ class TMTree:
             self.rect = rect
         elif len(self._subtrees) == 1:  # base case 3 folder has a single file
             self._subtrees[0].rect = rect
-        else:
+        else:  # recursive condition
             p_size = self.data_size
             if width > height:
                 
-                self._subtrees[0].rect = (x, y, width * math.floor(self._subtrees[0].data_size/p_size), height)
+                self._subtrees[0].rect = (x, y, int(width * self._subtrees[0].data_size/p_size), height)
                 for i in range(1, len(self._subtrees[:-1])):
                     prev = self._subtrees[i-1]
                     x_start = prev.rect[0] + prev.rect[2]
-                    self._subtrees[i].rect = (x_start, y, width * math.floor(self._subtrees[i].data_size/p_size), height)
+                    self._subtrees[i].rect = (x_start, y, int(width * self._subtrees[i].data_size/p_size), height)
                 prev = self._subtrees[-2]
-                x_start = prev.rect[0] + prev.rect[2]
+                x_start = prev.rect[0] + prev.rect[2]   
                 self._subtrees[-1].rect = (x_start, y, width - (prev.rect[0] + prev.rect[2]), height)
             else:
-                self._subtrees[0].rect = (x, y, width, height * (math.floor(self._subtrees[0].data_size)/p_size))
+                self._subtrees[0].rect = (x, y, width, int(height * (self._subtrees[0].data_size)/p_size))
                 for i in range(1, len(self._subtrees[:-1])):
                     prev = self._subtrees[i-1]
                     y_start = prev.rect[1] + prev.rect[3]
-                    self._subtrees[i].rect = (x, y_start, width, height * (math.floor(self._subtrees[i].data_size)/p_size))
+                    self._subtrees[i].rect = (x, y_start, width, int(height * (self._subtrees[i].data_size)/p_size), )
                 prev = self._subtrees[-2]
                 y_start = prev.rect[1] + prev.rect[3]
                 self._subtrees[-1].rect = (x, y_start, width, height - (prev.rect[1] + prev.rect[3]))
-            self._subtrees = [x.update_rectangles() for x in self._subtrees]
+            for x in range(len(self._subtrees)):  # recursive component
+                self._subtrees[x].update_rectangles(self._subtrees[x].rect)
 
         
 
@@ -183,13 +184,12 @@ class TMTree:
         appropriate pygame rectangle to display for a leaf, and the colour
         to fill it with.
         """
-        if self is None:
-            print(self)
-            return [((0,0,0,0), (100,100,100))]
-        elif self.is_empty():
+        # if self is None:
+        #     return [((0,0,0,0), (100,100,100))]
+        rects = []
+        if self._subtrees == []:
             return [(self.rect, self._colour)]
         else:
-            rects = [(self.rect, self._colour)]
             for x in self._subtrees:
                 rects = rects + TMTree.get_rectangles(x)
             return rects 
