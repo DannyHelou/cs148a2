@@ -108,15 +108,16 @@ class TMTree:
         self._name = name
         self._subtrees = subtrees[:]
         self._parent_tree = None
-        # task 1 initialization
-        self.data_size = data_size
+        # task 1 initialization 
         self._colour = (randint(0, 256), randint(0, 256), randint(0, 256))
 
         # You will change this in Task 5
         if len(self._subtrees) > 0:
             self._expanded = True
+            self.data_size = sum(subtree.data_size for subtree in self._subtrees)
         else:
             self._expanded = False
+            self.data_size = data_size
         # task one create parents
         for subtreei in range(len(self._subtrees)):
             self._subtrees[subtreei]._parent_tree = self
@@ -142,39 +143,38 @@ class TMTree:
         # Programming tip: use "tuple unpacking assignment" to easily extract
         # elements of a rectangle, as follows.
         # x, y, width, height = rect
-        # TODO: Implement checking for if the width is bigger than the height and changing the alg accordingly
+        
         x, y, width, height = rect
         if self.data_size == 0:  # base case 1 file is empty
-            pass
+            self.rect = (x,y,0,0)
         elif self._subtrees == []:  # base case 2 file is a leaf(not a directory)
             self.rect = rect
-        elif len(self._subtrees) == 1:  # base case 3 subtree only has one file in it
+        elif len(self._subtrees) == 1:  # base case 3 folder has a single file
             self._subtrees[0].rect = rect
-        else:  # base case 3 file a internal node(is a directory)
+        else:
+            p_size = self.data_size
             if width > height:
-                self._subtrees[0].rect = (x, y, math.floor(width*(self._subtrees[0].data_size/self.data_size)), height)  # starting point to allow for back track
-                for curr_file in range(len(self._subtrees[1:-1])):
-                    startx = self._subtrees[curr_file-1].rect[0]
-                    file_width = math.floor(width*(self._subtrees[curr_file].data_size/self.data_size))
-                    self._subtrees[curr_file].rect = (startx, y, file_width, height)
-                startx = self._subtrees[-2].rect[0]
-                file_width = math.floor(width-(self._subtrees[-2].rect[0] + self._subtrees[-2].rect[2]))
-                self._subtrees[-1].rect = (startx, y, file_width, height)  # modify alg to make sure that full rectange is filled
-                self._subtrees = [x.update_rectangles(x.rect) for x in self._subtrees]  # recurse through all of the subtrees
-            else:  # width <= height
-                self._subtrees[0].rect = (x, y, width, math.floor(height*(self._subtrees[0].data_size/self.data_size)))  # starting point to allow for back track
-                for curr_file in range(len(self._subtrees[1:-1])):
-                    starty = self._subtrees[curr_file-1].rect[1]
-                    file_height = math.floor(height*(self._subtrees[curr_file].data_size/self.data_size))
-                    self._subtrees[curr_file].rect = (x, starty, width, file_height)
-                starty = self._subtrees[-2].rect[1]
-                file_height = math.floor(height-(self._subtrees[-2].rect[1] + self._subtrees[-2].rect[3]))
-                self._subtrees[-1].rect = (x, starty, width, file_height)  # modify alg to make sure that full rectange is filled
-                for x in range(len(self._subtrees)):  # recurse through all of the subtrees
-                    if self._subtrees[x] is None:
-                        pass
-                    else:
-                        self._subtrees[x] = self._subtrees[x].update_rectangles(self._subtrees[x].rect)
+                
+                self._subtrees[0].rect = (x, y, width * math.floor(self._subtrees[0].data_size/p_size), height)
+                for i in range(1, len(self._subtrees[:-1])):
+                    prev = self._subtrees[i-1]
+                    x_start = prev.rect[0] + prev.rect[2]
+                    self._subtrees[i].rect = (x_start, y, width * math.floor(self._subtrees[i].data_size/p_size), height)
+                prev = self._subtrees[-2]
+                x_start = prev.rect[0] + prev.rect[2]
+                self._subtrees[-1].rect = (x_start, y, width - (prev.rect[0] + prev.rect[2]), height)
+            else:
+                self._subtrees[0].rect = (x, y, width, height * (math.floor(self._subtrees[0].data_size)/p_size))
+                for i in range(1, len(self._subtrees[:-1])):
+                    prev = self._subtrees[i-1]
+                    y_start = prev.rect[1] + prev.rect[3]
+                    self._subtrees[i].rect = (x, y_start, width, height * (math.floor(self._subtrees[i].data_size)/p_size))
+                prev = self._subtrees[-2]
+                y_start = prev.rect[1] + prev.rect[3]
+                self._subtrees[-1].rect = (x, y_start, width, height - (prev.rect[1] + prev.rect[3]))
+            self._subtrees = [x.update_rectangles() for x in self._subtrees]
+
+        
 
     def get_rectangles(self) -> List[Tuple[Tuple[int, int, int, int],
                                            Tuple[int, int, int]]]:
@@ -184,8 +184,8 @@ class TMTree:
         to fill it with.
         """
         if self is None:
-            print(self.tree)
-            return []
+            print(self)
+            return [((0,0,0,0), (100,100,100))]
         elif self.is_empty():
             return [(self.rect, self._colour)]
         else:
@@ -331,31 +331,5 @@ class FileSystemTree(TMTree):
         return f' ({", ".join(components)})'
 
 
-# if __name__ == '__main__':
-#     import python_ta
 
-#     python_ta.check_all(config={
-#         'allowed-import-modules': [
-#             'python_ta', 'typing', 'math', 'random', 'os', '__future__'
-#         ]
-#     })
-# EXAMPLE_PATH = os.path.join(os.getcwd(), 'example-directory', 'workshop')
-# # tree = FileSystemTree(os.path.join(EXAMPLE_PATH, 'draft.pptx'))
-# # print(tree._name == 'draft.pptx')
-# # print(tree._subtrees == [])
-# # print(tree._parent_tree is None)
-# # print(tree.data_size == 58)
-# # print(tree._colour)
-
-# tree = FileSystemTree(EXAMPLE_PATH)
-# print( tree._name == 'workshop')
-# print( tree._parent_tree is None)
-# print( tree.data_size == 160)
-# print( print(tree._colour))
-
-# print( len(tree._subtrees) == 3)
-# for subtree in tree._subtrees:
-#     # Note the use of is rather than ==.
-#     # This checks ids rather than values.
-#     print( subtree._parent_tree is tree)
 
