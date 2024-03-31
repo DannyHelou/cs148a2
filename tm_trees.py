@@ -108,15 +108,14 @@ class TMTree:
         self._name = name
         self._subtrees = subtrees[:]
         self._parent_tree = None
+        self._expanded = False
         # task 1 initialization 
         self._colour = (randint(0, 256), randint(0, 256), randint(0, 256))
 
         # You will change this in Task 5
         if len(self._subtrees) > 0:
-            self._expanded = True
             self.data_size = sum(subtree.data_size for subtree in self._subtrees)
         else:
-            self._expanded = False
             self.data_size = data_size
         # task one create parents
         for subtreei in range(len(self._subtrees)):
@@ -144,38 +143,33 @@ class TMTree:
         # elements of a rectangle, as follows.
         # x, y, width, height = rect
         
-        x, y, width, height = rect
-        if self.data_size == 0:  # base case 1 file is empty
-            self.rect = (x,y,0,0)
-        elif self._subtrees == []:  # base case 2 file is a leaf(not a directory)
+        x, y, wd, h = rect
+        if self.data_size == 0:
+            self.rect = (0, 0, 0, 0)
+        elif wd <= h:
             self.rect = rect
-        elif len(self._subtrees) == 1:  # base case 3 folder has a single file
-            self._subtrees[0].rect = rect
-        else:  # recursive condition
-            p_size = self.data_size
-            if width > height:
-                
-                self._subtrees[0].rect = (x, y, int(width * self._subtrees[0].data_size/p_size), height)
-                for i in range(1, len(self._subtrees[:-1])):
-                    prev = self._subtrees[i-1]
-                    x_start = prev.rect[0] + prev.rect[2]
-                    self._subtrees[i].rect = (x_start, y, int(width * self._subtrees[i].data_size/p_size), height)
-                prev = self._subtrees[-2]
-                x_start = prev.rect[0] + prev.rect[2]   
-                self._subtrees[-1].rect = (x_start, y, width - (prev.rect[0] + prev.rect[2]), height)
-            else:
-                self._subtrees[0].rect = (x, y, width, int(height * (self._subtrees[0].data_size)/p_size))
-                for i in range(1, len(self._subtrees[:-1])):
-                    prev = self._subtrees[i-1]
-                    y_start = prev.rect[1] + prev.rect[3]
-                    self._subtrees[i].rect = (x, y_start, width, int(height * (self._subtrees[i].data_size)/p_size), )
-                prev = self._subtrees[-2]
-                y_start = prev.rect[1] + prev.rect[3]
-                self._subtrees[-1].rect = (x, y_start, width, height - (prev.rect[1] + prev.rect[3]))
-            for x in range(len(self._subtrees)):  # recursive component
-                self._subtrees[x].update_rectangles(self._subtrees[x].rect)
-
-        
+            to_use = y
+            for i in range(len(self._subtrees)):
+                if i != len(self._subtrees) - 1:
+                    percent = self._subtrees[i].data_size / self.data_size
+                    new_h = math.floor(percent * h)
+                else:
+                    new_h = h + y - to_use
+                self._subtrees[i].update_rectangles((
+                    x, to_use, wd, new_h))
+                to_use += new_h
+        else:
+            self.rect = rect
+            to_use = x
+            for i in range(len(self._subtrees)):
+                if i != len(self._subtrees) - 1:
+                    percent = self._subtrees[i].data_size / self.data_size
+                    new_wd = math.floor(percent * wd)
+                else:
+                    new_wd = wd + x - to_use
+                self._subtrees[i].update_rectangles((
+                    to_use, y, new_wd, h))
+                to_use += new_wd
 
     def get_rectangles(self) -> List[Tuple[Tuple[int, int, int, int],
                                            Tuple[int, int, int]]]:
@@ -184,8 +178,6 @@ class TMTree:
         appropriate pygame rectangle to display for a leaf, and the colour
         to fill it with.
         """
-        # if self is None:
-        #     return [((0,0,0,0), (100,100,100))]
         rects = []
         if self._subtrees == []:
             return [(self.rect, self._colour)]
@@ -202,7 +194,28 @@ class TMTree:
         If <pos> is on the shared edge between two or more rectangles,
         always return the leftmost and topmost rectangle (wherever applicable).
         """
-        # TODO: (Task 3) Complete the body of this method
+        to_check = self._subtrees
+        if not self.is_inside_rec(self.rect, pos):
+            return None
+        elif self._subtrees:
+            for subtree in to_check:
+                if subtree.get_tree_at_position(pos):
+                    return subtree.get_tree_at_position(pos)
+        else:
+            return self
+
+    def is_inside_rec(self, rect: Tuple, pos: Tuple[int, int]) -> bool:
+        """
+        given a rectange rect in a coordinate base and an (x,y) format coordinate
+        pos, return True if the pos is located with on on the edge of the rectangle.
+        """
+        if pos[0] >= rect[0] and pos[1] >= rect[1]:
+            if (rect[0] + rect[2]) >= pos[0] and (rect[1] + rect[3]) >= pos[0]:
+                return True
+        return False
+
+
+
 
     def update_data_sizes(self) -> int:
         """Update the data_size for this tree and its subtrees, based on the
@@ -216,8 +229,13 @@ class TMTree:
         """If this tree is a leaf, and <destination> is not a leaf, move this
         tree to be the last subtree of <destination>. Otherwise, do nothing.
         """
-        # TODO: (Task 4) Complete the body of this method.
-
+        if not self._subtrees and destination._subtrees:
+            self._parent_tree._subtrees.remove(self)
+            self._parent_tree.data_size -= self.data_size
+            self._parent_tree = destination
+            destination._subtrees.append(self)
+        
+            
     def change_size(self, factor: float) -> None:
         """Change the value of this tree's data_size attribute by <factor>.
 
@@ -226,7 +244,18 @@ class TMTree:
 
         Do nothing if this tree is not a leaf.
         """
-        # TODO: (Task 4) Complete the body of this method
+        if not self._subtrees:
+            if factor > 0:
+                to_add = math.ceil(self.data_size * factor)
+                self.data_size += to_add
+            else:
+                to_add = math.floor(self.data_size * factor)
+                if self.data_size == 0:
+                    pass
+                elif self.data_size + to_add >= 1:
+                    self.data_size +=  to_add
+                else:
+                    self.data_size = 1
 
     def delete_self(self) -> bool:
         """Removes the current node from the visualization and
@@ -237,8 +266,12 @@ class TMTree:
         Do not set self._parent_tree to None, because it might be used
         by the visualiser to go back to the parent folder.
         """
-        # TODO: (Task 4) Complete the body of this method
-
+        if self._parent_tree:
+            self._parent_tree._subtrees.remove(self)
+            self._parent_tree.data_size -= self.data_size
+            return True
+        else:
+            return False
     # TODO: (Task 5) Write the methods expand, expand_all, collapse, and
     # TODO: collapse_all, and add the displayed-tree functionality to the
     # TODO: methods from Tasks 2 and 3
@@ -333,3 +366,9 @@ class FileSystemTree(TMTree):
 
 
 
+
+
+"""
+TODO:
+- Files do not ahve a rectangle associated with them, edit so that they are not given a width and a height
+"""
