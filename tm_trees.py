@@ -110,7 +110,7 @@ class TMTree:
         self._parent_tree = None
         self._expanded = False
         # task 1 initialization 
-        self._colour = (randint(0, 256), randint(0, 256), randint(0, 256))
+        self._colour = (randint(0, 255), randint(0, 255), randint(0, 255))
 
         # You will change this in Task 5
         if len(self._subtrees) > 0:
@@ -179,7 +179,9 @@ class TMTree:
         to fill it with.
         """
         rects = []
-        if self._subtrees == []:
+        if self.data_size == 0 or self.is_empty():
+            return []
+        elif not self._expanded or self._subtrees == []:
             return [(self.rect, self._colour)]
         else:
             for x in self._subtrees:
@@ -197,7 +199,7 @@ class TMTree:
         to_check = self._subtrees
         if not self.is_inside_rec(self.rect, pos):
             return None
-        elif self._subtrees:
+        elif self._subtrees and self._expanded:  # change made here to check if the desired rectanges are shown or the file is just being shown
             for subtree in to_check:
                 if subtree.get_tree_at_position(pos):
                     return subtree.get_tree_at_position(pos)
@@ -214,16 +216,18 @@ class TMTree:
                 return True
         return False
 
-
-
-
     def update_data_sizes(self) -> int:
         """Update the data_size for this tree and its subtrees, based on the
         size of their leaves, and return the new size.
 
         If this tree is a leaf, return its size unchanged.
         """
-        # TODO: (Task 4) Complete the body of this method.
+        if not self._subtrees:
+            return self.data_size
+        else:
+            size = sum(subtree.data_size for subtree in self._subtrees)
+            self.data_size = size
+            return size
 
     def move(self, destination: TMTree) -> None:
         """If this tree is a leaf, and <destination> is not a leaf, move this
@@ -275,7 +279,55 @@ class TMTree:
     # TODO: (Task 5) Write the methods expand, expand_all, collapse, and
     # TODO: collapse_all, and add the displayed-tree functionality to the
     # TODO: methods from Tasks 2 and 3
+    
+    def expand(self) -> None:
+        """
+        self is the selected rectangle,if the tree is not already expanded,
+        pressing e will expand the tree . If the tree does not have children,
+        then the tree is left as it is.
+        """
+        if self._parent_tree is not None: 
+            self._parent_tree.expand() 
+        if self._subtrees is not None:
+            self._expanded = True
+    
+    def expand_all(self) -> None:
+        """
+        self is the selected rectangle,if the tree is not already expanded,
+        pressing a will expand the tree and all of it's children. 
+        If the tree does not have children,
+        then the tree is left as it is.
+        """
+        if self._subtrees:
+            self.expand()
+            for subtree in self._subtrees:
+                subtree.expand_all()
 
+    def collapse(self) -> None:
+        """
+        self is the selected rectangle,if the tree is not already collapsed,
+        pressing c will expand the tree. 
+        If the tree does not have children,
+        then the tree is left as it is.
+        """
+        if self._parent_tree:
+            self._parent_tree._expanded = False
+            for subtree in self._parent_tree._subtrees:
+                subtree._expanded = False
+                for tree in subtree._subtrees:
+                    tree.collapse()
+        if not self.is_empty():
+            self._expanded = False
+    def collapse_all(self) -> None:
+        """
+        self is the selected rectangle,if the tree is not already expanded,
+        pressing x will collapse the tree and all of it's acestors. 
+        If the tree does not have parents,
+        then the tree is left as it is.
+        """
+        self.collapse()
+        if self._parent_tree:
+            self._parent_tree.collapse_all()
     # Methods for the string representation
     def get_path_string(self) -> str:
         """
