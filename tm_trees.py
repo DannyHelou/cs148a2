@@ -88,7 +88,6 @@ class TMTree:
 
     def __init__(self, name: str, subtrees: List[TMTree],
                  data_size: int = 0) -> None:
-        # TODO(Task 1)
         # 1. Initialize self._colour and self.data_size, according to the
         # docstring. DONE
         # 2. Set this tree as the parent for each of its subtrees. DONE
@@ -111,13 +110,14 @@ class TMTree:
         self._expanded = False
         # task 1 initialization 
         self._colour = (randint(0, 255), randint(0, 255), randint(0, 255))
-
-        # You will change this in Task 5
-        if len(self._subtrees) > 0:
-            self.data_size = sum(subtree.data_size for subtree in self._subtrees)
-        else:
+        if self._name is None:
+            self._subtrees = []
+            self._parent_tree = None
+            self.data_size = 0
+        elif not subtrees:
             self.data_size = data_size
-        # task one create parents
+        else:
+            self.data_size = sum(subtree.data_size for subtree in self._subtrees)
         for subtreei in range(len(self._subtrees)):
             self._subtrees[subtreei]._parent_tree = self
 
@@ -135,14 +135,12 @@ class TMTree:
         """Update the rectangles in this tree and its descendents using the
         treemap algorithm to fill the area defined by pygame rectangle <rect>.
         """
-        # TODO: (Task 2) Complete the body of this method.
         # Read the handout carefully to help get started identifying base cases,
         # then write the outline of a recursive step.
         #
         # Programming tip: use "tuple unpacking assignment" to easily extract
         # elements of a rectangle, as follows.
         # x, y, width, height = rect
-        
         x, y, wd, h = rect
         if self.data_size == 0:
             self.rect = (0, 0, 0, 0)
@@ -186,7 +184,7 @@ class TMTree:
         else:
             for x in self._subtrees:
                 rects = rects + TMTree.get_rectangles(x)
-            return rects 
+            return rects
 
     def get_tree_at_position(self, pos: Tuple[int, int]) -> Optional[TMTree]:
         """Return the leaf in the displayed-tree rooted at this tree whose
@@ -203,8 +201,7 @@ class TMTree:
             for subtree in to_check:
                 if subtree.get_tree_at_position(pos):
                     return subtree.get_tree_at_position(pos)
-        else:
-            return self
+        return self
 
     def is_inside_rec(self, rect: Tuple, pos: Tuple[int, int]) -> bool:
         """
@@ -212,7 +209,7 @@ class TMTree:
         pos, return True if the pos is located with on on the edge of the rectangle.
         """
         if pos[0] >= rect[0] and pos[1] >= rect[1]:
-            if (rect[0] + rect[2]) >= pos[0] and (rect[1] + rect[3]) >= pos[0]:
+            if (rect[0] + rect[2]) >= pos[0] and (rect[1] + rect[3]) >= pos[1]:
                 return True
         return False
 
@@ -273,13 +270,11 @@ class TMTree:
         if self._parent_tree:
             self._parent_tree._subtrees.remove(self)
             self._parent_tree.data_size -= self.data_size
+            if not self._parent_tree._subtrees:
+                self._parent_tree._expanded = False
             return True
-        else:
-            return False
-    # TODO: (Task 5) Write the methods expand, expand_all, collapse, and
-    # TODO: collapse_all, and add the displayed-tree functionality to the
-    # TODO: methods from Tasks 2 and 3
-    
+        return False
+
     def expand(self) -> None:
         """
         self is the selected rectangle,if the tree is not already expanded,
@@ -288,7 +283,7 @@ class TMTree:
         """
         if self._parent_tree is not None: 
             self._parent_tree.expand() 
-        if self._subtrees is not None:
+        if self._subtrees != []:
             self._expanded = True
     
     def expand_all(self) -> None:
@@ -318,6 +313,7 @@ class TMTree:
                     tree.collapse()
         if not self.is_empty():
             self._expanded = False
+
     def collapse_all(self) -> None:
         """
         self is the selected rectangle,if the tree is not already expanded,
@@ -328,6 +324,7 @@ class TMTree:
         self.collapse()
         if self._parent_tree:
             self._parent_tree.collapse_all()
+
     # Methods for the string representation
     def get_path_string(self) -> str:
         """
@@ -337,9 +334,8 @@ class TMTree:
         """
         if self._parent_tree is None:
             return self._name
-        else:
-            return self._parent_tree.get_path_string() + \
-                self.get_separator() + self._name
+        return self._parent_tree.get_path_string() + \
+            self.get_separator() + self._name
 
     def get_separator(self) -> str:
         """Return the string used to separate names in the string
@@ -415,12 +411,11 @@ class FileSystemTree(TMTree):
         components.append(convert_size(self.data_size))
         return f' ({", ".join(components)})'
 
+if __name__ == '__main__':
+    import python_ta
 
-
-
-
-
-"""
-TODO:
-- Files do not ahve a rectangle associated with them, edit so that they are not given a width and a height
-"""
+    python_ta.check_all(config={
+        'allowed-import-modules': ['python_ta', 'typing', 'csv', 'tm_trees'],
+        'allowed-io': ['_load_papers_to_dict', '_get_data'],
+        'max-args': 8
+    })
