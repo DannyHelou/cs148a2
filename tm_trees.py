@@ -224,6 +224,8 @@ class TMTree:
         else:
             size = sum(subtree.data_size for subtree in self._subtrees)
             self.data_size = size
+            if self._parent_tree:
+                self._parent_tree.update_data_sizes
             return size
 
     def move(self, destination: TMTree) -> None:
@@ -301,18 +303,19 @@ class TMTree:
     def collapse(self) -> None:
         """
         self is the selected rectangle,if the tree is not already collapsed,
-        pressing c will expand the tree. 
+        pressing c will collapse the tree. 
         If the tree does not have children,
         then the tree is left as it is.
         """
+        
         if self._parent_tree:
             self._parent_tree._expanded = False
             for subtree in self._parent_tree._subtrees:
                 subtree._expanded = False
                 for tree in subtree._subtrees:
                     tree.collapse()
-        if not self.is_empty():
-            self._expanded = False
+        
+
 
     def collapse_all(self) -> None:
         """
